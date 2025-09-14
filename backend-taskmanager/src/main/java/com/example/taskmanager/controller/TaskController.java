@@ -1,49 +1,72 @@
 package com.example.taskmanager.controller;
 
 import com.example.taskmanager.model.Task;
+import com.example.taskmanager.model.User;
 import com.example.taskmanager.repository.TaskRepository;
+import com.example.taskmanager.repository.UserRepository;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/tasks")
-@CrossOrigin(origins = "http://localhost:3000")  // allow frontend later
+@CrossOrigin(origins = "http://localhost:3000")
 public class TaskController {
 
-    private final TaskRepository taskRepo;
+    private final TaskRepository taskRepository;
+    private final UserRepository userRepository;
 
-    public TaskController(TaskRepository taskRepo) {
-        this.taskRepo = taskRepo;
+    public TaskController(TaskRepository taskRepository, UserRepository userRepository) {
+        this.taskRepository = taskRepository;
+        this.userRepository = userRepository;
     }
 
     @GetMapping
-    public List<Task> getAllTasks() {
-        return taskRepo.findAll();
+    public List<Task> getTasks(Authentication authentication) {
+        String username = ((UserDetails) authentication.getPrincipal()).getUsername();
+        User user = userRepository.findByUsername(username).orElseThrow();
+        return taskRepository.findByUser(user);
     }
 
     @PostMapping
-    public Task createTask(@RequestBody Task task) {
-        task.setCreatedAt(LocalDateTime.now());
-        return taskRepo.save(task);
+    public Task addTask(@RequestBody Task task, Authentication authentication) {
+        String username = ((UserDetails) authentication.getPrincipal()).getUsername();
+        User user = userRepository.findByUsername(username).orElseThrow();
+        task.setUser(user);
+        return taskRepository.save(task);
     }
 
     @PutMapping("/{id}")
-    public Task updateTask(@PathVariable Long id, @RequestBody Task updatedTask) {
-        return taskRepo.findById(id)
-                .map(task -> {
-                    task.setTitle(updatedTask.getTitle());
-                    task.setDescription(updatedTask.getDescription());
-                    task.setStatus(updatedTask.getStatus());
-                    task.setCategory(updatedTask.getCategory());
-                    return taskRepo.save(task);
-                })
-                .orElseThrow(() -> new RuntimeException("Task not found with id " + id));
+    public Task updateTask(@PathVariable Long id, @RequestBody Task taskDetails, Authentication authentication) {
+        String username = ((UserDetails) authentication.getPrincipal()).getUsername();
+        User user = userRepository.findByUsername(username).orElseThrow();
+
+        Task task = taskRepository.findById(id).orElseThrow();
+        if (!task.getUser().getId().equals(user.getId())) {
+            throw new RuntimeException("Not authorized to update this task");
+        }
+
+        task.setTitle(taskDetails.getTitle());
+        task.setDescription(taskDetails.getDescription());
+        task.setCategory(taskDetails.getCategory());
+        task.setStatus(taskDetails.getStatus());
+
+        return taskRepository.save(task);
     }
 
     @DeleteMapping("/{id}")
-    public void deleteTask(@PathVariable Long id) {
-        taskRepo.deleteById(id);
+    public String deleteTask(@PathVariable Long id, Authentication authentication) {
+        String username = ((UserDetails) authentication.getPrincipal()).getUsername();
+        User user = userRepository.findByUsername(username).orElseThrow();
+
+        Task task = taskRepository.findById(id).orElseThrow();
+        if (!task.getUser().getId().equals(user.getId())) {
+            throw new RuntimeException("Not authorized to delete this task");
+        }
+
+        taskRepository.delete(task);
+        return "Task deleted successfully!";
     }
 }

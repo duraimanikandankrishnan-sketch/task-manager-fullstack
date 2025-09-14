@@ -15,6 +15,10 @@ public class Task {
     private String status;   // e.g., "Pending", "Done"
     private String category; // e.g., "Work", "Personal"
 
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User user;  // owner of the task
+
     private LocalDateTime createdAt = LocalDateTime.now();
 
     // Getters and setters
@@ -35,4 +39,10 @@ public class Task {
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public User getUser() {
+        return user;
+    }
+    public void setUser(User user) {
+        this.user = user;
+    }
 }
