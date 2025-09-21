@@ -14,6 +14,17 @@ function TaskApp() {
       (window.matchMedia("(prefers-color-scheme: dark)").matches &&
         !localStorage.getItem("theme"))
   );
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+
+  const [page, setPage] = useState(0);
+  const [size] = useState(5); // fixed page size
+  const [totalPages, setTotalPages] = useState(0);
+
+  // Filters
+  const [filterStatus, setFilterStatus] = useState("");
+  const [filterCategory, setFilterCategory] = useState("");
 
   const API_URL = "http://localhost:8080/api/tasks";
 
@@ -31,13 +42,24 @@ function TaskApp() {
   useEffect(() => {
     fetchTasks();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [page, filterStatus, filterCategory]);
 
   const fetchTasks = () => {
+    setLoading(true);
+    setError(null);
     axios
-      .get(API_URL, { headers: { Authorization: `Bearer ${token}` } })
-      .then((response) => setTasks(response.data))
-      .catch((error) => console.error("❌ Error fetching tasks:", error));
+      .get(API_URL, { headers: { Authorization: `Bearer ${token}` },
+      params: {
+          page,
+          size,
+          status: filterStatus || undefined,
+          category: filterCategory || undefined,
+        }, })
+      .then((response) => { setTasks(response.data.content); 
+        setTotalPages(response.data.totalPages);
+      })
+      .catch(() => setError("⚠️ Failed to load tasks. Please try again."))
+    .finally(() => setLoading(false));
   };
 
   const addTask = (e) => {
@@ -49,10 +71,10 @@ function TaskApp() {
     axios
       .post(API_URL, newTask, { headers: { Authorization: `Bearer ${token}` } })
       .then((response) => {
-        setTasks([...tasks, response.data]);
         setTitle("");
         setDescription("");
         setCategory("");
+        fetchTasks(); // ✅ refresh list from backend
       })
       .catch((error) => console.error("❌ Error adding task:", error));
   };
@@ -62,6 +84,7 @@ function TaskApp() {
       .delete(`${API_URL}/${id}`, { headers: { Authorization: `Bearer ${token}` } })
       .then(() => {
         setTasks(tasks.filter((task) => task.id !== id));
+        fetchTasks();
       })
       .catch((error) => console.error("❌ Error deleting task:", error));
   };
@@ -78,6 +101,7 @@ function TaskApp() {
       })
       .then((res) => {
         setTasks(tasks.map((t) => (t.id === task.id ? res.data : t)));
+        fetchTasks();
       })
       .catch((error) => console.error("❌ Error updating task:", error));
   };
@@ -96,6 +120,37 @@ function TaskApp() {
           {darkMode ? "☀️ Light" : "🌙 Dark"}
         </button>
       </div>
+
+      {/* Filters */}
+<div className="flex gap-4 mb-6">
+  <select
+    value={filterStatus}
+    onChange={(e) => {
+      setPage(0);
+      setFilterStatus(e.target.value);
+    }}
+    className="px-3 py-2 border rounded dark:bg-gray-800 dark:text-gray-200"
+  >
+    <option value="">All Status</option>
+    <option value="PENDING">Pending</option>
+    <option value="DONE">Done</option>
+  </select>
+
+  <select
+  value={filterCategory}
+  onChange={(e) => {
+    setPage(0);
+    setFilterCategory(e.target.value);
+  }}
+  className="px-3 py-2 border rounded dark:bg-gray-800 dark:text-gray-200"
+>
+  <option value="">All Categories</option>
+  <option value="Work">Work</option>
+  <option value="Personal">Personal</option>
+  <option value="Shopping">Shopping</option>
+</select>
+</div>
+
 
       {/* Add Task Form */}
       <form
@@ -131,6 +186,9 @@ function TaskApp() {
           ➕ Add
         </button>
       </form>
+
+      {loading && <p className="text-center text-gray-500">⏳ Loading...</p>}
+      {error && <p className="text-center text-red-500">{error}</p>}
 
       {/* Task List */}
       <ul className="space-y-4">
@@ -175,7 +233,7 @@ function TaskApp() {
                       : "bg-orange-500 hover:bg-orange-600"
                   }`}
                 >
-                  {task.status === "PENDING" ? "Mark Done" : "Mark Pending"}
+                  {task.status === "PENDING" ? "Done" : "Pending"}
                 </button>
                 <button
                   onClick={() => deleteTask(task.id)}
@@ -192,7 +250,28 @@ function TaskApp() {
           </p>
         )}
       </ul>
-    </div>
+
+      {/* Pagination */}
+<div className="flex justify-center items-center gap-4 mt-6">
+  <button
+    disabled={page === 0}
+    onClick={() => setPage((p) => p - 1)}
+    className="px-4 py-2 rounded bg-gray-200 dark:bg-gray-700 disabled:opacity-50 hover:opacity-80"
+  >
+    ⬅ Prev
+  </button>
+  <span className="text-gray-700 dark:text-gray-300">
+    Page {page + 1} of {totalPages}
+  </span>
+  <button
+    disabled={page + 1 >= totalPages}
+    onClick={() => setPage((p) => p + 1)}
+    className="px-4 py-2 rounded bg-gray-200 dark:bg-gray-700 disabled:opacity-50 hover:opacity-80"
+  >
+    Next ➡
+  </button>
+</div>
+</div>
   );
 }
 
