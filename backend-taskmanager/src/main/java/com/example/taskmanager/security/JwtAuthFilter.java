@@ -12,12 +12,20 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.List;
 
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
     private final CustomUserDetailsService userDetailsService;
+    private static final List<String> WHITELIST = List.of(
+    "/api/auth",
+    "/api/auth/",
+    "/h2-console",
+    "/h2-console/",
+    "/actuator/health","/actuator/health/**"
+);
 
     public JwtAuthFilter(JwtUtil jwtUtil, CustomUserDetailsService userDetailsService) {
         this.jwtUtil = jwtUtil;
@@ -28,19 +36,27 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
         throws ServletException, IOException {
 
+     try {       
+
     String path = request.getRequestURI();
     System.out.println("➡️ JwtAuthFilter processing: " + path);
 
-    if (path.trim().startsWith("/api/auth/login")) {
-        chain.doFilter(request, response);
-        return;
-    }
+   if (path.trim().startsWith("/api/auth/login")) {
+       chain.doFilter(request, response);
+       return;
+   }
 
-    // ✅ Skip authentication for auth endpoints and H2 console
-    if (path.startsWith("/api/auth/") || path.startsWith("/h2-console")) {
-        chain.doFilter(request, response);
-        return;
-    }
+   // ✅ Skip authentication for auth endpoints and H2 console
+   if (path.startsWith("/api/auth/") || path.startsWith("/h2-console")||path.startsWith("/actuator")) {
+     System.out.println("➡️ JwtAuthFilter processing inside filter: " + path);
+       chain.doFilter(request, response);
+       return;
+   }
+
+    //if (WHITELIST.stream().anyMatch(path::startsWith)) {
+      //  chain.doFilter(request, response);
+        //return;
+   // }
 
     String authHeader = request.getHeader("Authorization");
 
@@ -62,6 +78,11 @@ protected void doFilterInternal(HttpServletRequest request, HttpServletResponse 
     }
 
     chain.doFilter(request, response);
+}catch(Exception e)
+{
+    e.printStackTrace();
+    chain.doFilter(request, response);
+}
 }
 
 }

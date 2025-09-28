@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: taskmgr-frontend
+  namespace: taskmgr
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: taskmgr-frontend
+  template:
+    metadata:
+      labels:
+        app: taskmgr-frontend
+    spec:
+      containers:
+      - name: frontend
+        image: durai2627/taskmgr-frontend:1.1
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: taskmgr-frontend
+  namespace: taskmgr
+spec:
+  selector:
+    app: taskmgr-frontend
+  ports:
+    - port: 80
+      targetPort: 80
+  type: ClusterIP

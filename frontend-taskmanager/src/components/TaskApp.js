@@ -26,7 +26,7 @@ function TaskApp() {
   const [filterStatus, setFilterStatus] = useState("");
   const [filterCategory, setFilterCategory] = useState("");
 
-  const API_URL = "http://localhost:8080/api/tasks";
+  const API_URL = "http://taskmgr.example.com/api/tasks";
 
   // ✅ Sync dark mode with <html>
   useEffect(() => {

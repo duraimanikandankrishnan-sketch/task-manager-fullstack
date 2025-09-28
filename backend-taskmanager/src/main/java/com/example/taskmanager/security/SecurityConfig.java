@@ -29,6 +29,7 @@ public class SecurityConfig {
         .cors(cors -> {}) 
             .authorizeHttpRequests(auth -> auth
                 // ✅ allow register/login/H2 console
+                .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                 .requestMatchers("/api/auth/**", "/h2-console/**").permitAll()
                 .anyRequest().authenticated()
             )

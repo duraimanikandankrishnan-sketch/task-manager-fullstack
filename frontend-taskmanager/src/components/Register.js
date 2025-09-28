@@ -8,7 +8,7 @@ function Register({ onRegisterSuccess, onSwitchToLogin }) {
   const handleRegister = async (e) => {
     e.preventDefault();
     try {
-      await axios.post("http://localhost:8080/api/auth/register", {
+      await axios.post("http://taskmgr.example.com/api/auth/register", {
         username,
         password,
       });
